@@ -129,7 +129,8 @@ GL.App = {
     GL.App.clear();
     GL.state = GL.newState();
     GL.Letter.reset();
-    GL.util.$('idInput').value = '';
+    GL.util.$('inNum').value = '';
+    GL.util.$('inName').value = '';
     GL.App.show('scr-login', 0, 2045);
   },
 
@@ -165,7 +166,7 @@ GL.App = {
     var saved = GL.App.load();
     if (saved && saved.id && saved.screen && saved.screen !== 'scr-login') {
       GL.App.confirm('이어서 할까요?',
-        saved.clsLabel + ' ' + saved.id.slice(2) + '번 ' + saved.name + ' 학생이 하던 활동이 남아 있어요.',
+        saved.clsLabel + ' ' + GL.util.numOf(saved.id) + '번 ' + saved.name + ' 학생이 하던 활동이 남아 있어요.',
         '이어서 하기', function () { GL.App.resume(saved); },
         '새로 시작', GL.App.reset);
     }

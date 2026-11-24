@@ -1,39 +1,60 @@
 /* =========================================================
-   student-login.js — 학번 입력 → 본인 확인 → 형편 카드 뒤집기
+   student-login.js — 학년·반·번호·이름 입력 → 본인 확인 → (투표 마감 뒤) 형편 카드 뒤집기
    이미 제출한 학생이면 쇼핑 없이 제출 결과 화면으로 (쇼핑은 1회만)
    ========================================================= */
 GL.Login = {
   init: function () {
-    var input = GL.util.$('idInput');
-    input.addEventListener('input', function () {
-      input.value = input.value.replace(/\D/g, '').slice(0, 4);
-      GL.util.$('loginErr').textContent = '';
+    var u = GL.util;
+    ['inCls', 'inNum'].forEach(function (k) {
+      u.$(k).addEventListener('input', function () { this.value = this.value.replace(/\D/g, '').slice(0, 2); });
     });
-    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') GL.Login.submit(); });
-    GL.util.$('loginBtn').onclick = GL.Login.submit;
+    ['inGrade', 'inCls', 'inNum', 'inName'].forEach(function (k) {
+      u.$(k).addEventListener('input', function () { this.classList.remove('bad'); u.$('loginErr').textContent = ''; });
+      u.$(k).addEventListener('keydown', function (e) { if (e.key === 'Enter') GL.Login.submit(); });
+    });
+    u.$('loginBtn').onclick = GL.Login.submit;
+    // 같은 기기를 반 친구들이 돌려 쓰는 경우가 많아서 학년·반은 기억해 둠
+    try {
+      var last = JSON.parse(localStorage.getItem('genelab-lastcls') || 'null');
+      if (last) { u.$('inGrade').value = last.g; u.$('inCls').value = last.c; }
+    } catch (e) {}
   },
 
   submit: async function () {
-    var id = GL.util.$('idInput').value.trim();
-    var err = GL.util.$('loginErr');
-    var btn = GL.util.$('loginBtn');
-    if (!/^\d{4}$/.test(id)) { err.textContent = '학번 네 자리를 입력해 주세요. (예: 3105)'; return; }
+    var u = GL.util;
+    var err = u.$('loginErr');
+    var btn = u.$('loginBtn');
+    var g = Number(u.$('inGrade').value), c = Number(u.$('inCls').value), n = Number(u.$('inNum').value);
+    var name = u.$('inName').value.replace(/\s+/g, '');
+    var bad = function (k, msg) { u.$(k).classList.add('bad'); u.$(k).focus(); err.textContent = msg; };
+    if (!(g >= 1 && g <= 6)) return bad('inGrade', '학년을 골라 주세요.');
+    if (!(c >= 1 && c <= 30)) return bad('inCls', '반을 숫자로 입력해 주세요.');
+    if (!(n >= 1 && n <= 60)) return bad('inNum', '번호를 숫자로 입력해 주세요.');
+    if (!name) return bad('inName', '이름을 입력해 주세요.');
     if (btn.disabled) return;
 
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>확인 중';
-    var res = await GL.api.call('login', { id: id });
+    var res = await GL.api.call('login', { grade: g, cls: c, num: n, name: name });
     btn.disabled = false;
-    btn.textContent = '카드 받기';
+    btn.textContent = '들어가기';
 
     if (!res.ok) { err.textContent = res.msg || '잠시 후 다시 시도해 주세요.'; return; }
+    try { localStorage.setItem('genelab-lastcls', JSON.stringify({ g: g, c: c })); } catch (e) {}
 
-    // 본인 확인 (친구 학번 오입력·장난 방지)
-    var clsLabel = id.charAt(0) + '-' + id.charAt(1);
-    GL.App.confirm(clsLabel + ' ' + id.slice(2) + '번 ' + res.name + ' 맞나요?',
-      '본인이 맞을 때만 눌러 주세요. 다른 친구의 학번으로 들어가면 그 친구의 결과가 바뀌어요.',
-      '맞아요', function () { GL.Login.enter(id, clsLabel, res); },
-      '아니에요', function () { GL.util.$('idInput').select(); });
+    // 본인 확인 (번호 오입력·장난 방지)
+    var clsLabel = g + '-' + c;
+    GL.App.confirm(g + '학년 ' + c + '반 ' + n + '번 ' + res.name + ' 맞나요?',
+      '본인이 맞을 때만 눌러 주세요. 다른 친구의 번호로 들어가면 그 친구의 결과가 바뀌어요.',
+      '맞아요', function () { GL.Login.enter(res.id, clsLabel, res); },
+      '아니에요', function () { u.$('inNum').select(); });
+  },
+
+  // 형편 카드 단계와 예산 정하기 (0 = 아직 카드 없음)
+  setLevel: function (level) {
+    var S = GL.state;
+    S.level = Number(level) || 0;
+    S.budget = S.level ? GL.LEVELS[S.level].budget : 0;
   },
 
   enter: function (id, clsLabel, res) {
@@ -42,8 +63,7 @@ GL.Login = {
     S.id = id;
     S.name = res.name;
     S.clsLabel = clsLabel;
-    S.level = Number(res.level);
-    S.budget = GL.LEVELS[S.level].budget;
+    GL.Login.setLevel(res.level);   // 투표 마감 전이면 0 (카드는 마감 때 나눠 줌)
     S.startedAt = Date.now();
 
     if (res.sub) {
@@ -69,7 +89,8 @@ GL.Login = {
 
     // 세율 투표: 마감됐으면 바로 카드, 이미 투표했으면 기다리기, 아니면 투표
     var v = res.vote || {};
-    if (v.closed) { GL.Vote.applyRate(v.rate); GL.Card.show(); }
+    if (v.closed && S.level) { GL.Vote.applyRate(v.rate); GL.Card.show(); }
+    else if (v.closed) GL.Vote.wait();
     else if (v.myVote !== null && v.myVote !== undefined) GL.Vote.wait();
     else GL.Vote.show();
   }
@@ -79,7 +100,7 @@ GL.Card = {
   show: function () {
     var S = GL.state;
     var lv = GL.LEVELS[S.level];
-    GL.util.$('cardWho').textContent = S.clsLabel + ' ' + S.id.slice(2) + '번 ' + S.name;
+    GL.util.$('cardWho').textContent = S.clsLabel + ' ' + GL.util.numOf(S.id) + '번 ' + S.name;
     GL.util.$('cardLevel').textContent = 'LEVEL ' + S.level + ' / 5';
     GL.util.$('cardName').textContent = lv.name;
     GL.util.$('cardBudget').textContent = GL.util.money(lv.budget);

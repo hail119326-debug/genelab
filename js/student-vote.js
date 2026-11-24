@@ -76,7 +76,7 @@ GL.Vote = {
       u.$('waitTitle').textContent = '투표했어요';
       u.$('waitMine').textContent = v.myVote !== null && v.myVote !== undefined
         ? '내 선택: ' + v.myVote + '% (' + info[v.myVote].name + ')' : '';
-      u.$('waitCount').textContent = '우리 반 ' + v.voted + '/' + v.total + '명 투표';
+      u.$('waitCount').textContent = '우리 반 들어온 ' + v.total + '명 중 ' + v.voted + '명 투표';
       u.$('waitNote').textContent = '선생님이 투표를 마감하면 결과와 형편 카드가 나와요.';
       u.$('waitResult').classList.add('hidden');
       u.$('waitBtn').classList.add('hidden');
@@ -85,8 +85,14 @@ GL.Vote = {
       return;
     }
 
-    // 마감됨 → 결과 보여 주고 카드 받기
+    // 마감됨 → 결과 보여 주고 카드 받기 (카드는 마감 때 서버가 나눠 줌)
     clearTimeout(GL.Vote.timer);
+    if (v.level) GL.Login.setLevel(v.level);
+    if (!GL.state.level) {   // 아직 카드가 도착하지 않음 → 잠시 뒤 다시 확인
+      u.$('waitNote').textContent = '형편 카드를 나누는 중이에요…';
+      GL.Vote.timer = setTimeout(GL.Vote.check, 3000);
+      return;
+    }
     GL.Vote.applyRate(v.rate);
     u.$('waitTitle').textContent = '우리 반의 결정: 세율 ' + v.rate + '%';
     u.$('waitMine').textContent = info[v.rate].name + ' · ' + info[v.rate].desc;

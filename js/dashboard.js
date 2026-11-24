@@ -5,7 +5,7 @@
 GL.Dash = {
   pw: '',
   roster: [],
-  subs: {},      // 학번 → 제출 기록
+  subs: {},      // 학번(자동) → 제출 기록
   cls: '',
   viewIds: [],   // 크게 보는 학생 (최대 2명)
   picking: false,
@@ -63,28 +63,28 @@ GL.Dash = {
     D.subs = {};
     (res.subs || []).forEach(function (s) { D.subs[s.id] = s; });
 
-    // 반 목록 (학번 앞 두 자리)
+    // 반 목록 (학번(자동) 앞 세 자리 = 학년 1 + 반 2)
     var classes = [];
     D.roster.forEach(function (r) {
-      var c = r.id.substr(0, 2);
+      var c = GL.util.clsOf(r.id);
       if (classes.indexOf(c) < 0) classes.push(c);
     });
     classes.sort();
     if (!D.cls || classes.indexOf(D.cls) < 0) {
       D.cls = classes.filter(function (c) {
-        return D.roster.some(function (r) { return r.id.substr(0, 2) === c && D.subs[r.id]; });
+        return D.roster.some(function (r) { return GL.util.clsOf(r.id) === c && D.subs[r.id]; });
       })[0] || classes[0] || '';
     }
     var sel = GL.util.$('clsSelect');
     sel.innerHTML = classes.map(function (c) {
-      return '<option value="' + c + '"' + (c === D.cls ? ' selected' : '') + '>' + c.charAt(0) + '학년 ' + c.charAt(1) + '반</option>';
+      return '<option value="' + c + '"' + (c === D.cls ? ' selected' : '') + '>' + GL.util.clsName(c) + '</option>';
     }).join('');
     D.render();
   },
 
   classRoster: function () {
     var D = GL.Dash;
-    return D.roster.filter(function (r) { return r.id.substr(0, 2) === D.cls; })
+    return D.roster.filter(function (r) { return GL.util.clsOf(r.id) === D.cls; })
       .sort(function (a, b) { return a.id < b.id ? -1 : 1; });
   },
 
@@ -195,7 +195,7 @@ GL.Dash = {
     var u = GL.util;
     var v = (D.votes || {})[D.cls] || { counts: { 0: 0, 10: 0, 30: 0 }, voted: 0, closed: false, rate: null };
     var total = D.classRoster().length;
-    u.$('voteState').textContent = v.closed ? '확정: 세율 ' + v.rate + '%' : '진행 중 · ' + v.voted + '/' + total + '명 투표';
+    u.$('voteState').textContent = v.closed ? '확정: 세율 ' + v.rate + '%' : '진행 중 · 들어온 ' + total + '명 중 ' + v.voted + '명 투표';
     var maxN = Math.max(1, v.voted);
     u.$('statVote').innerHTML = GL.POLICY.RATES.map(function (r) {
       var n = v.counts[r] || 0;
@@ -218,8 +218,8 @@ GL.Dash = {
         '<button class="btn btn-sm" id="voteReset">투표 다시 하기</button>';
       u.$('voteReset').onclick = D.resetVote;
     } else {
-      act.innerHTML = '<button class="btn btn-sm btn-ink" id="voteClose">투표 마감하고 결과 확정</button>' +
-        '<span class="muted small">학생 화면은 5~7초마다 자동으로 확인해요. 결과를 보려면 새로고침을 눌러 주세요.</span>';
+      act.innerHTML = '<button class="btn btn-sm btn-ink" id="voteClose">투표 마감하고 카드 나누기</button>' +
+        '<span class="muted small">마감하면 그때까지 들어온 학생 수에 맞춰 형편 카드를 비율대로 나눠요. 늦게 온 학생은 남은 카드에서 받아요. 최신 인원은 새로고침으로 확인하세요.</span>';
       u.$('voteClose').onclick = function () { D.closeVote(null); };
     }
   },
@@ -230,7 +230,7 @@ GL.Dash = {
     if (!res.ok) { D.toast(res.msg); return; }
     if (res.tie) { D.tie = res.tie; D.renderVote(); return; }
     D.tie = null;
-    D.toast('세율 ' + res.rate + '%로 확정했어요');
+    D.toast('세율 ' + res.rate + '%로 확정' + (res.dealt ? ' · ' + res.dealt + '명에게 카드를 나눴어요' : '했어요'));
     D.refresh();
   },
 
@@ -305,7 +305,7 @@ GL.Dash = {
       var lv = r.level ? '<span class="lv-chip lv' + r.level + '">L' + r.level + '</span>' : '<span class="muted small">카드 전</span>';
       var cnt = done && D.subs[r.id].count > 1 ? '<span class="chip-cnt mono">제출 ' + D.subs[r.id].count + '회</span>' : '';
       return '<button class="chip' + (done ? ' done' : '') + '" data-id="' + r.id + '">' +
-        '<span class="chip-num mono">' + r.id.slice(2) + '</span>' +
+        '<span class="chip-num mono">' + GL.util.numOf(r.id) + '</span>' +
         '<span class="chip-name">' + u.esc(r.name) + '</span>' + lv + cnt + '</button>';
     }).join('') || '<p class="muted">학생명단 시트에 이 반 학생이 없어요.</p>';
     box.querySelectorAll('.chip').forEach(function (b) {
@@ -345,7 +345,7 @@ GL.Dash = {
         ? '<span class="ans-choice ' + (q.cls[q.choices.indexOf(picked)] || '') + '">' + u.esc(picked + extra) + '</span>' : '';
       return '<article class="ans-card">' +
         '<header><span class="lv-chip lv' + s.level + '">L' + s.level + '</span>' +
-        '<span class="mono muted">' + s.id.slice(2) + '</span><b>' + u.esc(s.name) + '</b>' + choice + '</header>' +
+        '<span class="mono muted">' + GL.util.numOf(s.id) + '</span><b>' + u.esc(s.name) + '</b>' + choice + '</header>' +
         '<p>' + u.esc(s[q.key] || '—') + '</p></article>';
     }).join('') || '<p class="muted">아직 이 조건에 맞는 답변이 없어요.</p>';
   },
@@ -384,7 +384,7 @@ GL.Dash = {
       u.$('viewerHint').textContent = '비교할 학생을 고르세요';
       strip.classList.remove('hidden');
       strip.innerHTML = D.classSubs().filter(function (s) { return s.id !== D.viewIds[0]; }).map(function (s) {
-        return '<button class="chip done" data-id="' + s.id + '"><span class="chip-num mono">' + s.id.slice(2) + '</span>' +
+        return '<button class="chip done" data-id="' + s.id + '"><span class="chip-num mono">' + GL.util.numOf(s.id) + '</span>' +
           '<span class="lv-chip lv' + s.level + '">L' + s.level + '</span></button>';
       }).join('');
       strip.querySelectorAll('.chip').forEach(function (b) {

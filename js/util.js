@@ -26,5 +26,10 @@ GL.util = {
     return String(s || '').replace(/\s/g, '').length;
   },
 
+  // 학번(자동) 31205 = 3학년 12반 5번 → 반 '312', 번호 '5'
+  clsOf: function (id) { return String(id || '').substr(0, 3); },
+  numOf: function (id) { return String(Number(String(id || '').substr(3)) || ''); },
+  clsName: function (cls) { return cls.charAt(0) + '학년 ' + Number(cls.substr(1)) + '반'; },
+
   $: function (id) { return document.getElementById(id); }
 };

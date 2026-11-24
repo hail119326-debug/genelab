@@ -25,7 +25,7 @@ GL.ResultCard = {
     var lv = GL.LEVELS[rec.level] || { name: '?', short: '?' };
     var picks = rec.picks || [];
     var s = GL.sim.summarize(picks);
-    var num = String(rec.id || '').slice(2);
+    var num = GL.util.numOf(rec.id);
 
     var pickHtml = picks.length ? picks.map(function (p) {
       var o = GL.optById[p.id];
