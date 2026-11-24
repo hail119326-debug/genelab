@@ -17,6 +17,21 @@ main { height: calc(100dvh - 52px - env(safe-area-inset-top, 0px)); }
 }
 .id-input:focus { outline: none; border-color: var(--ink); }
 .login-row .btn { min-height: 52px; }
+.who-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.who-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.who-field > span { font-size: 13px; font-weight: 600; color: var(--muted); }
+.who-name { grid-column: 1 / -1; }
+.who-input {
+  width: 100%; height: 52px; padding: 0 14px; font-size: 20px; font-family: inherit;
+  border: 1px solid var(--line-strong); border-radius: var(--r); background: var(--paper); color: var(--ink);
+}
+.who-input.mono { font-family: var(--mono); }
+select.who-input { appearance: none; -webkit-appearance: none; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 20px) 50%, calc(100% - 14px) 50%; background-size: 6px 6px; background-repeat: no-repeat; }
+.who-input:focus { outline: none; border-color: var(--ink); }
+.who-input.bad { border-color: var(--danger); }
+.login-go { min-height: 52px; margin-top: 14px; font-size: 17px; }
 
 /* ---------- 1. 형편 카드 ---------- */
 .card-wrap { margin: auto; display: flex; align-items: center; gap: 48px; padding: 20px; }
