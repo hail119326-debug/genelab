@@ -429,8 +429,40 @@ GL.Dash = {
     GL.Dash._tt = setTimeout(function () { t.classList.remove('show'); }, 2200);
   },
 
+  /* 학생 접속 QR: 이 대시보드와 같은 폴더의 학생 화면 주소를 QR로 크게 띄움 */
+  studentUrl: function () {
+    return new URL('./', location.href).href;
+  },
+  showQr: function () {
+    var u = GL.util;
+    var url = GL.Dash.studentUrl();
+    if (!GL.Dash._qrDone) {
+      var qr = qrcode(0, 'M');
+      qr.addData(url);
+      qr.make();
+      var n = qr.getModuleCount(), m = 2, d = '';
+      for (var r = 0; r < n; r++) {
+        for (var c = 0; c < n; c++) {
+          if (qr.isDark(r, c)) d += 'M' + (c + m) + ' ' + (r + m) + 'h1v1h-1z';
+        }
+      }
+      var size = n + m * 2;
+      u.$('qrCode').innerHTML = '<svg viewBox="0 0 ' + size + ' ' + size + '" shape-rendering="crispEdges" role="img" aria-label="학생 화면 주소 QR 코드">' +
+        '<rect width="' + size + '" height="' + size + '" fill="#fff"/><path fill="#000" d="' + d + '"/></svg>';
+      u.$('qrUrl').textContent = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      GL.Dash._qrDone = true;
+    }
+    u.$('qrScr').classList.remove('hidden');
+    u.$('qrClose').focus();
+  },
+  hideQr: function () {
+    GL.util.$('qrScr').classList.add('hidden');
+  },
+
   init: function () {
     var u = GL.util;
+    u.$('qrBtn').onclick = GL.Dash.showQr;
+    u.$('qrClose').onclick = GL.Dash.hideQr;
     GL.api.warmup();
     u.$('pwBtn').onclick = GL.Dash.unlock;
     u.$('pwInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') GL.Dash.unlock(); });
@@ -447,7 +479,9 @@ GL.Dash = {
     try { tv = localStorage.getItem('genelab-tv'); } catch (e) {}
     if (tv) GL.Dash.toggleTv(true);
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') u.$('viewer').classList.add('hidden');
+      if (e.key !== 'Escape') return;
+      if (!u.$('qrScr').classList.contains('hidden')) { GL.Dash.hideQr(); return; }
+      u.$('viewer').classList.add('hidden');
     });
   }
 };
