@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Gowun+Batang&display=swap">
-<link rel="stylesheet" href="css/common.css?v=20261125">
-<link rel="stylesheet" href="css/student.css?v=20261125">
+<link rel="stylesheet" href="css/common.css?v=20261125b">
+<link rel="stylesheet" href="css/student.css?v=20261125b">
 </head>
 <body>
 
@@ -25,16 +25,27 @@
 </header>
 
 <main>
-  <!-- 1. 학번 입력 -->
+  <!-- 1. 학년·반·번호·이름 입력 -->
   <section class="screen active" id="scr-login">
     <div class="login-wrap">
       <p class="mono muted eyebrow">연구 참여자 등록</p>
       <h1>유전자 편집 쇼핑몰</h1>
       <p class="lead">2045년, 태어날 아기의 유전자를 돈으로 고를 수 있게 되었어요.<br>여러분은 곧 부모가 됩니다.</p>
-      <div class="login-row">
-        <input id="idInput" class="id-input mono" inputmode="numeric" maxlength="4" placeholder="3105" autocomplete="off">
-        <button class="btn btn-ink" id="loginBtn">카드 받기</button>
+      <div class="who-grid">
+        <label class="who-field"><span>학년</span>
+          <select id="inGrade" class="who-input"><option value="">선택</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
+        </label>
+        <label class="who-field"><span>반</span>
+          <input id="inCls" class="who-input mono" type="text" inputmode="numeric" maxlength="2" placeholder="1" autocomplete="off">
+        </label>
+        <label class="who-field"><span>번호</span>
+          <input id="inNum" class="who-input mono" type="text" inputmode="numeric" maxlength="2" placeholder="5" autocomplete="off">
+        </label>
+        <label class="who-field who-name"><span>이름</span>
+          <input id="inName" class="who-input" type="text" maxlength="20" placeholder="홍길동" autocomplete="off">
+        </label>
       </div>
+      <button class="btn btn-ink btn-block login-go" id="loginBtn">들어가기</button>
       <p class="err" id="loginErr"></p>
     </div>
   </section>
@@ -218,24 +229,24 @@
 <div class="modal hidden" id="modal"><div class="modal-box" id="modalBox"></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="js/config.js?v=20261125"></script>
-<script src="js/util.js?v=20261125"></script>
-<script src="js/data-options.js?v=20261125"></script>
-<script src="js/data-story.js?v=20261125"></script>
-<script src="js/data-policy.js?v=20261125"></script>
-<script src="js/data-quiz.js?v=20261125"></script>
-<script src="js/data-life.js?v=20261125"></script>
-<script src="js/data-letter.js?v=20261125"></script>
-<script src="js/simulate.js?v=20261125"></script>
-<script src="js/api.js?v=20261125"></script>
-<script src="js/result-card.js?v=20261125"></script>
-<script src="js/student-app.js?v=20261125"></script>
-<script src="js/student-login.js?v=20261125"></script>
-<script src="js/student-vote.js?v=20261125"></script>
-<script src="js/student-shop.js?v=20261125"></script>
-<script src="js/student-money.js?v=20261125"></script>
-<script src="js/student-job.js?v=20261125"></script>
-<script src="js/student-report.js?v=20261125"></script>
-<script src="js/student-letter.js?v=20261125"></script>
+<script src="js/config.js?v=20261125b"></script>
+<script src="js/util.js?v=20261125b"></script>
+<script src="js/data-options.js?v=20261125b"></script>
+<script src="js/data-story.js?v=20261125b"></script>
+<script src="js/data-policy.js?v=20261125b"></script>
+<script src="js/data-quiz.js?v=20261125b"></script>
+<script src="js/data-life.js?v=20261125b"></script>
+<script src="js/data-letter.js?v=20261125b"></script>
+<script src="js/simulate.js?v=20261125b"></script>
+<script src="js/api.js?v=20261125b"></script>
+<script src="js/result-card.js?v=20261125b"></script>
+<script src="js/student-app.js?v=20261125b"></script>
+<script src="js/student-login.js?v=20261125b"></script>
+<script src="js/student-vote.js?v=20261125b"></script>
+<script src="js/student-shop.js?v=20261125b"></script>
+<script src="js/student-money.js?v=20261125b"></script>
+<script src="js/student-job.js?v=20261125b"></script>
+<script src="js/student-report.js?v=20261125b"></script>
+<script src="js/student-letter.js?v=20261125b"></script>
 </body>
 </html>
