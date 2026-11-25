@@ -378,6 +378,7 @@ GL.Dash = {
     u.$('viewerCards').className = 'viewer-cards' + (D.viewIds.length > 1 ? ' two' : '');
     u.$('viewerCards').innerHTML = D.viewIds.map(function (id) { return GL.ResultCard.html(D.subs[id], { meta: true, summary: true }); }).join('');
     u.$('cmpBtn').textContent = D.viewIds.length > 1 ? '한 명만 보기' : '나란히 비교';
+    u.$('resetBtn').classList.toggle('hidden', D.viewIds.length > 1);
 
     var strip = u.$('pickStrip');
     if (D.picking) {
@@ -419,6 +420,30 @@ GL.Dash = {
       a.click();
       a.remove();
     });
+  },
+
+  // 학생 한 명을 다시 하게 하기: 제출 기록만 지움 (카드·투표는 그대로)
+  resetStudent: async function () {
+    var D = GL.Dash;
+    if (D.viewIds.length !== 1) return;
+    var id = D.viewIds[0];
+    var s = D.subs[id];
+    var who = s ? (GL.util.numOf(id) + '번 ' + s.name) : id + '번';
+    if (!confirm(who + ' 학생의 제출 기록을 지우고, 처음부터 다시 쇼핑하게 할까요?\n(형편 카드와 투표 결과는 그대로 남아요)')) return;
+
+    var btn = GL.util.$('resetBtn');
+    btn.disabled = true;
+    btn.textContent = '처리 중…';
+    var res = await GL.api.call('resetStudent', { pw: D.pw, id: id });
+    btn.disabled = false;
+    btn.textContent = '다시 하게 하기';
+    if (!res.ok) { D.toast(res.msg); return; }
+
+    delete D.subs[id];
+    GL.util.$('viewer').classList.add('hidden');
+    D.renderChips();
+    D.renderAnswers();
+    D.toast(who + ' 학생이 다시 접속하면 처음부터 다시 할 수 있어요');
   },
 
   toast: function (msg) {
@@ -471,6 +496,7 @@ GL.Dash = {
     u.$('closeBtn').onclick = function () { u.$('viewer').classList.add('hidden'); };
     u.$('cmpBtn').onclick = GL.Dash.toggleCompare;
     u.$('jpgBtn').onclick = GL.Dash.saveJpg;
+    u.$('resetBtn').onclick = GL.Dash.resetStudent;
     document.querySelectorAll('.vtab').forEach(function (t) {
       t.onclick = function () { GL.Dash.switchView(t.dataset.view); };
     });
