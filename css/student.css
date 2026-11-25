@@ -50,16 +50,53 @@ select.who-input { appearance: none; -webkit-appearance: none; cursor: pointer;
 .card-fan .flip.not-chosen {
   opacity: 0; transform: scale(.6); width: 0; margin: 0; pointer-events: none; overflow: hidden;
 }
-.card-fan .flip .face-back { font-size: 9px; gap: 6px; }
-.card-fan .flip .face-back .seq { font-size: 8px; line-height: 1.6; }
+.card-fan .flip .face-back { gap: 8px; }
+.card-fan .flip .face-back .card-mystery { font-size: 26px; }
 .face {
   position: absolute; inset: 0; border-radius: 16px; padding: 18px;
   display: flex; flex-direction: column; justify-content: space-between;
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
 }
-.face-back { background: var(--ink); color: #fff; font-size: 12px; letter-spacing: .08em; }
-.face-back .seq { font-size: 11px; line-height: 1.9; opacity: .5; letter-spacing: .18em; word-break: break-all; }
-.face-back .tap { opacity: .7; animation: blink 1.6s ease-in-out infinite; }
+/* 뒷면: 뭐가 나올지 모르는 신비한 카드 — 어두운 보라~남색 배경에 반짝이는 별, 빛나는 물음표 */
+.face-back {
+  background:
+    radial-gradient(120% 90% at 50% -10%, rgba(124,58,237,.35), transparent 60%),
+    radial-gradient(130% 100% at 50% 110%, rgba(34,211,238,.18), transparent 55%),
+    linear-gradient(160deg, #1b1240 0%, #120a2e 55%, #0a0618 100%);
+  color: #fff; font-size: 12px; letter-spacing: .08em;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  border: 1px solid rgba(167,139,250,.45);
+  box-shadow:
+    inset 0 0 0 1px rgba(103,232,249,.12),
+    inset 0 0 26px rgba(124,58,237,.25),
+    0 0 22px rgba(139,92,246,.35);
+}
+.card-stars {
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: .8;
+  background-image:
+    radial-gradient(1.6px 1.6px at 18% 24%, #fff, transparent),
+    radial-gradient(1.6px 1.6px at 78% 18%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 40% 72%, #fff, transparent),
+    radial-gradient(1.8px 1.8px at 85% 68%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 58% 42%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 12% 80%, #fff, transparent),
+    radial-gradient(1.4px 1.4px at 92% 88%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 30% 12%, #fff, transparent);
+  animation: starTwinkle 3s ease-in-out infinite;
+}
+@keyframes starTwinkle { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+.card-mystery {
+  position: relative; font-weight: 800; font-size: 44px; letter-spacing: .04em; line-height: 1;
+  background: linear-gradient(135deg, #d8b4fe, #67e8f9);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 10px rgba(192,132,252,.7)) drop-shadow(0 0 18px rgba(103,232,249,.5));
+  animation: mysteryPulse 2.2s ease-in-out infinite;
+}
+@keyframes mysteryPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+.face-back .tap { position: relative; opacity: .7; animation: blink 1.6s ease-in-out infinite; }
 @keyframes blink { 50% { opacity: .25; } }
 .face-front { background: var(--paper); border: 2px solid var(--ink); transform: rotateY(180deg); }
 .card-name { font-size: 15px; color: var(--muted); margin: 0; }
@@ -351,6 +388,7 @@ select.who-input { appearance: none; -webkit-appearance: none; cursor: pointer;
   .card-fan { gap: 8px; }
   .card-fan .flip { width: 78px; }
   .card-fan .flip.flipped { width: 200px; }
+  .card-fan .flip .face-back .card-mystery { font-size: 20px; }
 
   .shop { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
   .shop-panel {
@@ -408,5 +446,5 @@ select.who-input { appearance: none; -webkit-appearance: none; cursor: pointer;
   .tab { flex-shrink: 0; min-height: 36px; padding: 0 14px; font-size: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .flip-inner, .face-back .tap, .card-fan .flip { transition: none; animation: none; }
+  .flip-inner, .face-back .tap, .card-fan .flip, .card-mystery, .card-stars { transition: none; animation: none; }
 }
