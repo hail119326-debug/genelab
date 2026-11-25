@@ -97,11 +97,11 @@ GL.Login = {
 };
 
 GL.Card = {
-  // 카드 뒷면(아직 안 고른 상태) 내용 — 5장 다 똑같이 생겼어요
+  // 카드 뒷면(아직 안 고른 상태) 내용 — 5장 다 똑같이 생겼어요 (게임처럼 신비롭게!)
   backHtml_: function () {
     return '<div class="face face-back">' +
-      '<span class="mono">FAMILY CARD</span>' +
-      '<div class="seq mono" aria-hidden="true">ATGCGTACCTGAATGCCGTA<br>TACGCATGGACTTACGGCAT<br>GGCTTAACGTACGATCCGTA<br>CCGAATTGCATGCATCCGGA</div>' +
+      '<div class="card-stars" aria-hidden="true"></div>' +
+      '<span class="card-mystery" aria-hidden="true">??</span>' +
       '<span class="tap mono">터치해서 뒤집기</span>' +
       '</div>';
   },
