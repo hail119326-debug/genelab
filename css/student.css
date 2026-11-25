@@ -123,7 +123,7 @@ select.who-input { appearance: none; -webkit-appearance: none; cursor: pointer;
 .d-odds { margin-top: 14px; }
 .odds-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--line); }
 .o-ok { background: var(--treat); }
-.o-none { background: var(--line-strong); }
+.o-none { background: var(--muted); }
 .o-side { background: var(--danger); }
 .odds-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); margin-top: 6px; }
 .big-price { margin-right: auto; font-size: 18px; }
