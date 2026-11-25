@@ -278,7 +278,8 @@ GL.LETTER = {
       if (!o) return -1;
       var base = p.status === 'side' ? 5 : p.status === 'none' ? 4 :
         (o.tag === 'enhance' ? 3 : o.tag === 'border' ? 2 : 1);
-      return base * 1000000 + o.price;   // 같은 단계면 비싼 것 우선
+      var price = p.price != null ? p.price : o.price;
+      return base * 1000000 + price;   // 같은 단계면 비싼 것 우선
     };
     var best = null;
     (picks || []).forEach(function (p) { if (!best || rank(p) > rank(best)) best = p; });
@@ -319,7 +320,10 @@ GL.LETTER = {
     var scene = (GL.LETTER_SCENE[core.id] || {})[core.status] || '';
     var paras = [scene];
 
-    var others = picks.filter(function (p) { return p !== core; }).map(function (p) { return GL.optById[p.id].name; });
+    var others = picks.filter(function (p) { return p !== core; }).map(function (p) {
+      var o = GL.optById[p.id];
+      return o.name + (p.variant ? '(' + p.variant + ')' : '');
+    });
     if (others.length) {
       var shown = others.slice(0, 3).map(function (n) { return '「' + n + '」'; }).join(', ');
       paras.push('엄마 아빠가 골라 준 건 그것만이 아니었죠. ' + shown +

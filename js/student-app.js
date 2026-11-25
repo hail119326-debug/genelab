@@ -8,6 +8,7 @@ GL.newState = function () {
   return {
     id: '', name: '', clsLabel: '', level: 0, budget: 0,
     picks: [],        // 고른 옵션 id (고른 순서대로)
+    variants: {},     // 세부 선택이 있는 옵션의 선택값 { 옵션id: {idx} 또는 {delta} }
     voucherId: null,  // L1 국가 지원으로 무료 처리된 옵션 id
     results: [],      // 탄생 후 [{id, status}] — 한 번 정해지면 바뀌지 않음
     news: [],         // 20년 후 뉴스 4개 (처음 볼 때 고르고 저장)
@@ -81,7 +82,7 @@ GL.App = {
       '<ol class="help-list">' +
       '<li><b>형편 카드</b>를 받아요 (무작위)</li>' +
       '<li>예산 안에서 <b>유전자</b>를 골라요</li>' +
-      '<li>돈이 모자라면 <b>아르바이트</b> (퀴즈 1개 10만 원)</li>' +
+      '<li>돈이 모자라면 <b>아르바이트</b> (퀴즈 1개 100만 원)</li>' +
       '<li><b>아이 탄생</b> → 20년 후로 (쇼핑은 한 번만)</li>' +
       '<li><b>편지</b>를 읽고 답한 뒤 제출해요</li>' +
       '</ol>' +

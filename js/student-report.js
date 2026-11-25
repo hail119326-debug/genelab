@@ -25,7 +25,8 @@ GL.Report = {
     var rank = function (p) {
       var o = GL.optById[p.id];
       var b = p.status === 'side' ? 5 : p.status === 'none' ? 4 : (o.tag === 'enhance' ? 3 : o.tag === 'border' ? 2 : 1);
-      return b * 1000000 + o.price;
+      var price = p.price != null ? p.price : o.price;
+      return b * 1000000 + price;
     };
     var sorted = S.results.slice().sort(function (a, b) { return rank(b) - rank(a); });
     u.$('profPicks').innerHTML = sorted.map(function (p, i) {

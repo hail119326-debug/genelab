@@ -33,7 +33,7 @@ GL.ResultCard = {
       var st = GL.sim.STATUS[p.status] || GL.sim.STATUS.none;
       return '<li class="rc-pick ' + st.cls + '">' +
         '<span class="rc-mark">' + st.mark + '</span>' +
-        '<span class="rc-pname">' + u.esc(o.name) + '</span>' +
+        '<span class="rc-pname">' + u.esc(o.name) + (p.variant ? ' <span class="rc-variant muted">· ' + u.esc(p.variant) + '</span>' : '') + '</span>' +
         '<span class="tag ' + GL.TAGS[o.tag].cls + '">' + GL.TAGS[o.tag].name + '</span>' +
         (p.status === 'side' ? '<span class="rc-side">' + u.esc(GL.sim.sideText(o)) + '</span>' : '') +
         '</li>';

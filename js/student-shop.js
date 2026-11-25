@@ -14,7 +14,37 @@ GL.Shop = {
     return S.level === 1 && o.tag === 'treat' && !S.voucherId;
   },
 
-  priceOf: function (o) { return GL.state.voucherId === o.id ? 0 : o.price; },
+  // 세부 선택(색상·정도·성별·키)이 있는 옵션의 실제 가격·확률·선택 라벨을 계산
+  // src: 생략하면 이미 저장된 선택(GL.state.variants)을 쓰고, 상세 모달 미리보기에서는 스크래치 값을 넘겨요
+  effective: function (o, src) {
+    src = src || GL.state.variants[o.id];
+    if (o.id === 'height') {
+      var cfg = o.heightConfig;
+      var delta = (src && src.delta != null) ? src.delta : cfg.defaultDelta;
+      var rate = delta <= 0 ? null : Math.max(cfg.rateFloor, cfg.rateStart - (delta - 1) * cfg.rateStep);
+      return { price: delta * cfg.perCm, rate: rate, label: delta > 0 ? ('+' + delta + 'cm') : '기준 그대로', delta: delta };
+    }
+    if (o.variants) {
+      var idx = (src && src.idx != null) ? src.idx : (o.defaultIdx || 0);
+      var v = o.variants[idx];
+      return {
+        price: v.price != null ? v.price : o.price,
+        rate: v.rate !== undefined ? v.rate : o.rate,
+        label: v.label, idx: idx
+      };
+    }
+    return { price: o.price, rate: o.rate, label: null };
+  },
+
+  // 성별(sex) 선택에 따른 '키' 옵션 기준값
+  heightBaseLabel: function (o) {
+    var sexV = GL.state.variants.sex;
+    var genderLabel = (sexV && sexV.idx != null) ? GL.optById.sex.variants[sexV.idx].label : null;
+    var base = genderLabel ? o.genderBase[genderLabel] : o.genderBase['default'];
+    return { genderLabel: genderLabel || '평균', base: base };
+  },
+
+  priceOf: function (o) { return GL.state.voucherId === o.id ? 0 : GL.Shop.effective(o).price; },
 
   spent: function () {
     return GL.state.picks.reduce(function (sum, id) { return sum + GL.Shop.priceOf(GL.optById[id]); }, 0);
@@ -24,11 +54,19 @@ GL.Shop = {
   total: function () { return GL.Money.total(); },
   remaining: function () { return GL.Shop.total() - GL.Shop.spent(); },
 
+  // id를 뺀 나머지로 계산한 남은 돈 (이미 고른 옵션의 세부 선택을 바꿀 때 예산 확인용)
+  remainingExcluding: function (id) {
+    var otherSpent = GL.state.picks.reduce(function (sum, pid) {
+      return pid === id ? sum : sum + GL.Shop.priceOf(GL.optById[pid]);
+    }, 0);
+    return GL.Shop.total() - otherSpent;
+  },
+
   // 고를 수 있는지 + 못 고르는 이유
   check: function (o) {
     if (GL.Shop.isPicked(o.id)) return { ok: true };
     if (GL.Shop.isVoucherable(o)) return { ok: true };
-    if (o.price <= GL.Shop.remaining()) return { ok: true };
+    if (GL.Shop.effective(o).price <= GL.Shop.remaining()) return { ok: true };
     if (GL.state.level === 1 && o.tag === 'treat') return { ok: false, why: '지원은 1개만' };
     return { ok: false, why: '예산 부족' };
   },
@@ -100,17 +138,21 @@ GL.Shop = {
     grid.innerHTML = list.map(function (o) {
       var picked = GL.Shop.isPicked(o.id);
       var chk = GL.Shop.check(o);
+      var eff = GL.Shop.effective(o);
       var free = (!picked && GL.Shop.isVoucherable(o)) || GL.state.voucherId === o.id;
       var lock = !chk.ok ? GL.Shop.LOCK_SVG : '';
       var priceTxt = free
-        ? '<span class="price mono"><s>' + u.money(o.price) + '</s> 무료</span>'
-        : '<span class="price mono">' + lock + u.money(o.price) + '</span>';
-      var state = picked ? '<span class="opt-state on">✓ 선택함</span>' : '';
+        ? '<span class="price mono"><s>' + u.money(eff.price) + '</s> 무료</span>'
+        : '<span class="price mono">' + lock + u.money(eff.price) + '</span>';
+      var rateTxt = eff.rate === null ? '변경 없음' : '성공률 ' + eff.rate + '%';
+      var state = picked ? '<span class="opt-state on">✓ 선택함' + (eff.label ? ' · ' + u.esc(eff.label) : '') + '</span>' : '';
+      var variantHint = (o.variants || o.id === 'height') && !picked ? '<span class="opt-variant-hint small muted">세부 선택 가능</span>' : '';
       return '<button class="opt' + (picked ? ' sel' : '') + (!chk.ok ? ' locked' : '') + '" data-id="' + o.id + '">' +
         '<div class="opt-top"><span class="gene mono">' + u.esc(o.gene) + '</span>' +
         '<span class="tag ' + GL.TAGS[o.tag].cls + '">' + GL.TAGS[o.tag].name + '</span></div>' +
         '<div class="opt-name">' + u.esc(o.name) + '</div>' +
-        '<div class="opt-bot">' + priceTxt + '<span class="rate mono">성공률 ' + o.rate + '%</span></div>' +
+        '<div class="opt-bot">' + priceTxt + '<span class="rate mono">' + rateTxt + '</span></div>' +
+        variantHint +
         state +
         '</button>';
     }).join('');
@@ -162,7 +204,9 @@ GL.Shop = {
       cart.innerHTML = S.picks.map(function (id) {
         var o = GL.optById[id];
         var p = GL.Shop.priceOf(o);
-        return '<li><span class="cart-name">' + u.esc(o.name) + '</span>' +
+        var eff = GL.Shop.effective(o);
+        var name = u.esc(o.name) + (eff.label ? ' <span class="muted">· ' + u.esc(eff.label) + '</span>' : '');
+        return '<li><span class="cart-name">' + name + '</span>' +
           '<span class="mono cart-price">' + (p ? u.money(p) : '무료') + '</span>' +
           '<button class="cart-x" data-id="' + id + '" aria-label="빼기">×</button></li>';
       }).join('');
@@ -172,17 +216,50 @@ GL.Shop = {
     }
   },
 
-  /* ---------- 옵션 상세 ---------- */
+  /* ---------- 옵션 상세 (세부 선택이 있으면 색상·정도·성별·키 조절 UI 포함) ---------- */
   openDetail: function (o) {
+    // 모달을 열 때마다 스크래치(미리보기용 임시 선택)를 저장된 값 또는 기본값으로 초기화
+    var saved = GL.state.variants[o.id];
+    if (o.id === 'height') {
+      GL.Shop._scratch = { delta: saved && saved.delta != null ? saved.delta : o.heightConfig.defaultDelta };
+    } else if (o.variants) {
+      GL.Shop._scratch = { idx: saved && saved.idx != null ? saved.idx : (o.defaultIdx || 0) };
+    } else {
+      GL.Shop._scratch = null;
+    }
+    GL.Shop.renderDetail(o);
+  },
+
+  // 세부 선택 스크래치(_scratch)를 반영해서 모달을 (다시) 그림
+  renderDetail: function (o) {
     var u = GL.util;
     var picked = GL.Shop.isPicked(o.id);
-    var chk = GL.Shop.check(o);
-    var noneP = Math.round((100 - o.rate) * (1 - GL.sim.SIDE_SHARE));
-    var sideP = 100 - o.rate - noneP;
+    var eff = GL.Shop.effective(o, GL.Shop._scratch);
+    var free = GL.Shop.isVoucherable(o) || GL.state.voucherId === o.id;
+
+    // 예산 확인: 이미 담은 옵션이면 그 옵션 몫은 빼고 계산
+    var budget = picked ? GL.Shop.remainingExcluding(o.id) : GL.Shop.remaining();
+    var afford = free || eff.price <= budget;
+    var chkWhy = (GL.state.level === 1 && o.tag === 'treat') ? '지원은 1개만' : '예산 부족';
     var btn = picked
       ? '<button class="btn" id="dAct">선택 취소</button>'
-      : (chk.ok ? '<button class="btn btn-ink" id="dAct">선택하기</button>'
-                : '<button class="btn" disabled>' + chk.why + '</button>');
+      : (afford ? '<button class="btn btn-ink" id="dAct">선택하기</button>'
+                : '<button class="btn" disabled>' + chkWhy + '</button>');
+
+    var oddsHtml;
+    if (eff.rate === null) {
+      oddsHtml = '<p class="muted small">기준 그대로라 추가로 바뀌는 건 없어요.</p>';
+    } else {
+      var noneP = Math.round((100 - eff.rate) * (1 - GL.sim.SIDE_SHARE));
+      var sideP = 100 - eff.rate - noneP;
+      oddsHtml = '<div class="d-odds">' +
+        '<div class="odds-bar"><span class="o-ok" style="width:' + eff.rate + '%"></span>' +
+        '<span class="o-none" style="width:' + noneP + '%"></span>' +
+        '<span class="o-side" style="width:' + sideP + '%"></span></div>' +
+        '<div class="odds-legend mono"><span>● 성공 ' + eff.rate + '%</span><span>○ 효과 없음 ' + noneP + '%</span>' +
+        '<span>▲ 의도하지 않은 변화 ' + sideP + '%</span></div>' +
+      '</div>';
+    }
 
     GL.App.modal(
       '<div class="d-top"><span class="gene mono">GENE · ' + u.esc(o.gene) + '</span>' +
@@ -190,23 +267,129 @@ GL.Shop = {
       '<h3>' + u.esc(o.name) + '</h3>' +
       '<p>' + u.esc(o.desc) + '</p>' +
       (o.gene === '다유전자' ? '<p class="muted small">다유전자: 수백 개 이상의 유전자가 함께 관여하는 특성이라 원하는 대로 바꾸기 어려워요.</p>' : '') +
-      '<div class="d-odds">' +
-        '<div class="odds-bar"><span class="o-ok" style="width:' + o.rate + '%"></span>' +
-        '<span class="o-none" style="width:' + noneP + '%"></span>' +
-        '<span class="o-side" style="width:' + sideP + '%"></span></div>' +
-        '<div class="odds-legend mono"><span>● 성공 ' + o.rate + '%</span><span>○ 효과 없음 ' + noneP + '%</span>' +
-        '<span>▲ 의도하지 않은 변화 ' + sideP + '%</span></div>' +
-      '</div>' +
+      GL.Shop.variantBlockHtml(o) +
+      oddsHtml +
       '<div class="modal-actions"><span class="price mono big-price">' +
-        (GL.Shop.isVoucherable(o) || GL.state.voucherId === o.id ? '무료 (국가 지원)' : u.money(o.price)) +
+        (free ? '무료 (국가 지원)' : u.money(eff.price)) +
       '</span><button class="btn" id="dClose">닫기</button>' + btn + '</div>');
 
-    u.$('dClose').onclick = GL.App.closeModal;
+    u.$('dClose').onclick = function () { GL.Shop._scratch = null; GL.App.closeModal(); };
     var act = u.$('dAct');
     if (act) act.onclick = function () {
-      if (picked) GL.Shop.remove(o.id); else GL.Shop.add(o);
+      if (picked) {
+        GL.Shop.remove(o.id);
+      } else {
+        if (o.id === 'height' || o.variants) {
+          GL.state.variants[o.id] = GL.Shop._scratch ? { idx: GL.Shop._scratch.idx, delta: GL.Shop._scratch.delta } : undefined;
+        }
+        GL.Shop.add(o);
+      }
+      GL.Shop._scratch = null;
       GL.App.closeModal();
     };
+    GL.Shop.bindVariantHandlers(o);
+  },
+
+  // 옵션 종류에 따라 세부 선택 UI 조각을 만듦
+  variantBlockHtml: function (o) {
+    if (o.id === 'height') return GL.Shop.heightBlockHtml(o);
+    if (!o.variants) return '';
+    if (o.variantType === 'swatch') return GL.Shop.swatchBlockHtml(o);
+    if (o.variantType === 'arrow') return GL.Shop.arrowBlockHtml(o);
+    if (o.variantType === 'spectrum') return GL.Shop.spectrumBlockHtml(o);
+    return '';
+  },
+
+  // 색상 등 '어떤 종류'를 고르는 스와치 (예: 눈 색깔, 성별)
+  swatchBlockHtml: function (o) {
+    var u = GL.util;
+    var idx = GL.Shop._scratch.idx;
+    return '<div class="variant-block">' +
+      '<span class="variant-label mono">세부 선택 · ' + (o.id === 'sex' ? '성별' : '색상') + '</span>' +
+      '<div class="variant-swatches">' + o.variants.map(function (v, i) {
+        var sw = v.hex ? '<span class="variant-swatch-dot" style="background:' + v.hex + '"></span>' : '';
+        return '<button class="variant-swatch-btn' + (i === idx ? ' on' : '') + '" data-vi="' + i + '">' + sw + u.esc(v.label) + '</button>';
+      }).join('') + '</div></div>';
+  },
+
+  // 화살표로 정도를 넘기는 방식 (예: 쌍꺼풀)
+  arrowBlockHtml: function (o) {
+    var u = GL.util;
+    var idx = GL.Shop._scratch.idx;
+    var v = o.variants[idx];
+    return '<div class="variant-block">' +
+      '<span class="variant-label mono">세부 선택 · 정도</span>' +
+      '<div class="variant-arrow-row">' +
+        '<button class="variant-arrow-btn" id="vPrev" aria-label="약하게"' + (idx === 0 ? ' disabled' : '') + '>' + GL.Shop.ARROW_L + '</button>' +
+        '<div class="variant-arrow-mid">' +
+          '<div class="variant-dots">' + o.variants.map(function (x, i) {
+            return '<span class="variant-dot' + (i === idx ? ' on' : '') + '"></span>';
+          }).join('') + '</div>' +
+          '<span class="mono variant-arrow-text">' + u.esc(v.label) + '</span>' +
+        '</div>' +
+        '<button class="variant-arrow-btn" id="vNext" aria-label="진하게"' + (idx === o.variants.length - 1 ? ' disabled' : '') + '>' + GL.Shop.ARROW_R + '</button>' +
+      '</div></div>';
+  },
+
+  // 스펙트럼 단계 버튼 (예: 외향적 성격, 공격성, 불안)
+  spectrumBlockHtml: function (o) {
+    var u = GL.util;
+    var idx = GL.Shop._scratch.idx;
+    return '<div class="variant-block">' +
+      '<span class="variant-label mono">세부 선택 · 정도</span>' +
+      '<div class="variant-spectrum-row">' + o.variants.map(function (v, i) {
+        return '<button class="variant-seg-btn' + (i === idx ? ' on' : '') + '" data-vi="' + i + '">' + u.esc(v.label) + '</button>';
+      }).join('') + '</div></div>';
+  },
+
+  // 키: 성별 옵션에서 고른 기준 + cm 스텝퍼
+  heightBlockHtml: function (o) {
+    var gb = GL.Shop.heightBaseLabel(o);
+    var delta = GL.Shop._scratch.delta;
+    var cfg = o.heightConfig;
+    return '<div class="variant-block">' +
+      '<span class="variant-label mono">세부 선택 · 몇 cm 더 키울지</span>' +
+      '<p class="muted small" style="margin:0 0 8px">기준: ' + (gb.genderLabel === '평균' ? '성별 미선택, ' : GL.util.esc(gb.genderLabel) + ' ') + '평균 키 ' + gb.base + 'cm' +
+        (gb.genderLabel === '평균' ? ' (성별 선택을 먼저 고르면 더 정확해져요)' : '') + '</p>' +
+      '<div class="variant-arrow-row">' +
+        '<button class="variant-arrow-btn" id="hDec" aria-label="1cm 줄이기"' + (delta <= 0 ? ' disabled' : '') + '>−</button>' +
+        '<div class="variant-arrow-mid">' +
+          '<span class="mono variant-height-num">' + (gb.base + delta) + 'cm</span>' +
+          '<span class="mono small muted">기준보다 +' + delta + 'cm</span>' +
+        '</div>' +
+        '<button class="variant-arrow-btn" id="hInc" aria-label="1cm 늘리기"' + (delta >= cfg.maxCm ? ' disabled' : '') + '>+</button>' +
+      '</div>' +
+      '<div class="variant-jump-row">' + [0, 5, 10, 20].map(function (n) {
+        return '<button class="variant-jump-btn" data-cm="' + n + '">' + (n === 0 ? '초기화' : '+' + n + 'cm') + '</button>';
+      }).join('') + '</div></div>';
+  },
+
+  ARROW_L: '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M7 1L3 5l4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  ARROW_R: '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+
+  // 세부 선택 UI의 버튼들에 클릭 핸들러 연결 (모달을 다시 그릴 때마다 호출)
+  bindVariantHandlers: function (o) {
+    var u = GL.util;
+    if (o.id === 'height') {
+      var dec = u.$('hDec'), inc = u.$('hInc');
+      if (dec) dec.onclick = function () { GL.Shop._scratch.delta = Math.max(0, GL.Shop._scratch.delta - 1); GL.Shop.renderDetail(o); };
+      if (inc) inc.onclick = function () { GL.Shop._scratch.delta = Math.min(o.heightConfig.maxCm, GL.Shop._scratch.delta + 1); GL.Shop.renderDetail(o); };
+      document.querySelectorAll('.variant-jump-btn').forEach(function (b) {
+        b.onclick = function () { GL.Shop._scratch.delta = Number(b.dataset.cm); GL.Shop.renderDetail(o); };
+      });
+      return;
+    }
+    if (!o.variants) return;
+    if (o.variantType === 'arrow') {
+      var prev = u.$('vPrev'), next = u.$('vNext');
+      if (prev) prev.onclick = function () { GL.Shop._scratch.idx = Math.max(0, GL.Shop._scratch.idx - 1); GL.Shop.renderDetail(o); };
+      if (next) next.onclick = function () { GL.Shop._scratch.idx = Math.min(o.variants.length - 1, GL.Shop._scratch.idx + 1); GL.Shop.renderDetail(o); };
+      return;
+    }
+    // swatch, spectrum: data-vi를 가진 버튼들
+    document.querySelectorAll('.variant-swatch-btn, .variant-seg-btn').forEach(function (b) {
+      b.onclick = function () { GL.Shop._scratch.idx = Number(b.dataset.vi); GL.Shop.renderDetail(o); };
+    });
   },
 
   /* ---------- 아이 탄생 ---------- */
@@ -224,7 +407,13 @@ GL.Shop = {
   birth: function () {
     var S = GL.state;
     S.spent = GL.Shop.spent();
-    S.results = S.picks.map(function (id) { return { id: id, status: GL.sim.roll(GL.optById[id]) }; });
+    S.results = S.picks.map(function (id) {
+      var o = GL.optById[id];
+      var eff = GL.Shop.effective(o);
+      // price를 결과에 같이 저장해 둬야 나중에(교사 대시보드 등 다른 세션에서) 다시 계산하지 않고도
+      // 그때 고른 세부 선택의 정확한 가격을 알 수 있어요.
+      return { id: id, status: GL.sim.roll(o, eff.rate), variant: eff.label || null, price: eff.price };
+    });
     GL.App.save();
 
     // 짧은 편집 로그 연출 후 20년 뒤 리포트로

@@ -9,10 +9,14 @@
 GL.sim = {
   SIDE_SHARE: 0.25,
 
-  roll: function (opt) {
+  // rateOverride: 세부 선택(색상·정도·성별·키)이 있는 옵션은 고른 단계에 따라 확률이 달라져서 따로 넘겨요.
+  // rateOverride가 null이면 '기본 유지'처럼 실제로는 편집하지 않는 선택이라 굴리지 않고 바로 '효과 없음'.
+  roll: function (opt, rateOverride) {
+    var rate = rateOverride !== undefined ? rateOverride : opt.rate;
+    if (rate === null) return 'none';
     var r = Math.random() * 100;
-    if (r < opt.rate) return 'ok';
-    if (r < opt.rate + (100 - opt.rate) * GL.sim.SIDE_SHARE) return 'side';
+    if (r < rate) return 'ok';
+    if (r < rate + (100 - rate) * GL.sim.SIDE_SHARE) return 'side';
     return 'none';
   },
 

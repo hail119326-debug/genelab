@@ -261,7 +261,8 @@ GL.LIFE_SUMMARY = function (rec) {
   picks.forEach(function (p) {
     var o = GL.optById[p.id];
     if (!o) return;
-    var price = o.price;
+    // p.price: 탄생 때 저장해 둔, 그 학생이 실제로 고른 세부 선택의 가격 (옛 기록엔 없을 수 있어 그때는 기본 가격)
+    var price = p.price != null ? p.price : o.price;
     if (rec.level === 1 && o.tag === 'treat' && !freeUsed) { price = 0; freeUsed = true; }
     if (p.status === 'ok') okM += price;
     if (p.status === 'none') noneM += price;
