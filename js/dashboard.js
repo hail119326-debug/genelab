@@ -379,6 +379,7 @@ GL.Dash = {
     u.$('viewerCards').innerHTML = D.viewIds.map(function (id) { return GL.ResultCard.html(D.subs[id], { meta: true, summary: true }); }).join('');
     u.$('cmpBtn').textContent = D.viewIds.length > 1 ? '한 명만 보기' : '나란히 비교';
     u.$('resetBtn').classList.toggle('hidden', D.viewIds.length > 1);
+    u.$('resetCardOptWrap').classList.toggle('hidden', D.viewIds.length > 1);
 
     var strip = u.$('pickStrip');
     if (D.picking) {
@@ -422,28 +423,35 @@ GL.Dash = {
     });
   },
 
-  // 학생 한 명을 다시 하게 하기: 제출 기록만 지움 (카드·투표는 그대로)
+  // 학생 한 명을 다시 하게 하기: 제출 기록을 지움
+  // "카드도 새로 뽑기"를 체크하면 형편 카드도 같이 지우고, 다음 로그인 때 L1~L5 중 균등한 확률(20%씩)로 새 카드를 뽑음
+  // (체크 안 하면 기존처럼 카드·투표는 그대로 두고 같은 카드로 다시 쇼핑)
   resetStudent: async function () {
     var D = GL.Dash;
     if (D.viewIds.length !== 1) return;
     var id = D.viewIds[0];
     var s = D.subs[id];
     var who = s ? (GL.util.numOf(id) + '번 ' + s.name) : id + '번';
-    if (!confirm(who + ' 학생의 제출 기록을 지우고, 처음부터 다시 쇼핑하게 할까요?\n(형편 카드와 투표 결과는 그대로 남아요)')) return;
+    var withCard = GL.util.$('resetCardChk').checked;
+    var msg = withCard
+      ? who + ' 학생의 제출 기록과 형편 카드를 지우고, 다음에 들어오면 L1~L5 중 새 카드를 뽑게 할까요?\n(투표 결과는 그대로 남아요)'
+      : who + ' 학생의 제출 기록을 지우고, 처음부터 다시 쇼핑하게 할까요?\n(형편 카드와 투표 결과는 그대로 남아요)';
+    if (!confirm(msg)) return;
 
     var btn = GL.util.$('resetBtn');
     btn.disabled = true;
     btn.textContent = '처리 중…';
-    var res = await GL.api.call('resetStudent', { pw: D.pw, id: id });
+    var res = await GL.api.call('resetStudent', { pw: D.pw, id: id, withCard: withCard });
     btn.disabled = false;
     btn.textContent = '다시 하게 하기';
     if (!res.ok) { D.toast(res.msg); return; }
 
     delete D.subs[id];
+    GL.util.$('resetCardChk').checked = false;
     GL.util.$('viewer').classList.add('hidden');
     D.renderChips();
     D.renderAnswers();
-    D.toast(who + ' 학생이 다시 접속하면 처음부터 다시 할 수 있어요');
+    D.toast(who + ' 학생이 다시 접속하면 ' + (withCard ? '새 카드로' : '처음부터') + ' 다시 할 수 있어요');
   },
 
   toast: function (msg) {
