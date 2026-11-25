@@ -97,28 +97,65 @@ GL.Login = {
 };
 
 GL.Card = {
+  // 카드 뒷면(아직 안 고른 상태) 내용 — 5장 다 똑같이 생겼어요
+  backHtml_: function () {
+    return '<div class="face face-back">' +
+      '<span class="mono">FAMILY CARD</span>' +
+      '<div class="seq mono" aria-hidden="true">ATGCGTACCTGAATGCCGTA<br>TACGCATGGACTTACGGCAT<br>GGCTTAACGTACGATCCGTA<br>CCGAATTGCATGCATCCGGA</div>' +
+      '<span class="tap mono">터치해서 뒤집기</span>' +
+      '</div>';
+  },
+
   show: function () {
     var S = GL.state;
     var lv = GL.LEVELS[S.level];
     GL.util.$('cardWho').textContent = S.clsLabel + ' ' + GL.util.numOf(S.id) + '번 ' + S.name;
-    GL.util.$('cardLevel').textContent = 'LEVEL ' + S.level + ' / 5';
-    GL.util.$('cardName').textContent = lv.name;
-    GL.util.$('cardBudget').textContent = GL.util.money(lv.budget);
-    GL.util.$('cardNote').textContent = lv.note;
 
     // 우리 반 세율에 따른 세금 (지원금은 쇼핑 화면에서 신청해야 받음)
     var taxLine = '';
     if (S.tax) taxLine = '세금 −' + GL.util.money(S.tax) + ' (세율 ' + S.rate + '%)';
     else if (GL.POLICY.support(S.rate || 0, S.level) > 0) taxLine = '국가 지원 신청 가능';
-    GL.util.$('cardTax').textContent = taxLine;
 
-    var flip = GL.util.$('flip');
-    flip.classList.remove('flipped');
+    // 학생이 어떤 카드를 고르든 결과는 이미 정해져 있어요(형편은 고르는 게 아니니까요) —
+    // 5장을 뒤집어 놓고 하나를 고르게 해서, 그 카드가 내 결과를 보여주는 것처럼 느끼게 함
+    var fan = GL.util.$('cardFan');
+    fan.innerHTML = '';
+    GL.util.$('cardPickHint').classList.remove('invisible');
     GL.util.$('cardAfter').classList.add('invisible');
-    flip.onclick = function () {
-      flip.classList.add('flipped');
-      setTimeout(function () { GL.util.$('cardAfter').classList.remove('invisible'); }, 500);
-    };
+
+    var picked = false;
+    var slots = [];
+    for (var i = 0; i < 5; i++) {
+      var el = document.createElement('div');
+      el.className = 'flip';
+      el.innerHTML = '<div class="flip-inner">' + GL.Card.backHtml_() +
+        '<div class="face face-front">' +
+          '<span class="mono muted">LEVEL ' + S.level + ' / 5</span>' +
+          '<div>' +
+            '<p class="card-name">' + GL.util.esc(lv.name) + '</p>' +
+            '<p class="card-budget mono">' + GL.util.esc(GL.util.money(lv.budget)) + '</p>' +
+          '</div>' +
+          (taxLine ? '<p class="card-tax mono">' + GL.util.esc(taxLine) + '</p>' : '<p class="card-tax mono"></p>') +
+          '<p class="card-note">' + GL.util.esc(lv.note) + '</p>' +
+        '</div>' +
+        '</div>';
+      (function (card) {
+        card.onclick = function () {
+          if (picked) return;
+          picked = true;
+          GL.util.$('cardPickHint').classList.add('invisible');
+          slots.forEach(function (other) {
+            other.onclick = null;
+            if (other !== card) other.classList.add('not-chosen');
+          });
+          card.classList.add('flipped');
+          setTimeout(function () { GL.util.$('cardAfter').classList.remove('invisible'); }, 650);
+        };
+      })(el);
+      slots.push(el);
+      fan.appendChild(el);
+    }
+
     GL.util.$('startShopBtn').onclick = function () {
       GL.state.startedAt = Date.now();
       GL.Shop.show();
